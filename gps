@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body {
+      background: transparent;
+      margin: 0;
+      font-family: Arial, sans-serif;
+    }
+    #location {
+      position: fixed;
+      bottom: 20px;
+      left: 20px;
+      background: rgba(0,0,0,0.6);
+      color: white;
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-size: 16px;
+    }
+  </style>
+</head>
+<body>
+  <div id="location">📍 Aguardando GPS...</div>
+
+  <script>
+    // Assina o tópico de localização do Moblin
+    moblin.subscribe({ location: {} });
+
+    moblin.onmessage = (message) => {
+      if (message.location) {
+        const lat = message.location.latitude?.toFixed(5);
+        const lon = message.location.longitude?.toFixed(5);
+        const spd = message.location.speed != null
+          ? (message.location.speed * 3.6).toFixed(1) + " km/h"
+          : "";
+        document.getElementById("location").innerText =
+          `📍 ${lat}, ${lon}  ${spd}`;
+      }
+    };
+  </script>
+</body>
+</html>
