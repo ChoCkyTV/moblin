@@ -1,42 +1,159 @@
 <!DOCTYPE html>
-<html>
+<html lang="pt-BR">
 <head>
-  <style>
-    body {
-      background: transparent;
-      margin: 0;
-      font-family: Arial, sans-serif;
-    }
-    #location {
-      position: fixed;
-      bottom: 20px;
-      left: 20px;
-      background: rgba(0,0,0,0.6);
-      color: white;
-      padding: 8px 14px;
-      border-radius: 8px;
-      font-size: 16px;
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Live Location</title>
+<link href="https://fonts.googleapis.com/css2?family=Fira+Sans:wght@700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:transparent;overflow:hidden;font-family:'Fira Sans',sans-serif;}
+.container{width:400px;height:220px;border:2px solid #12a312;background:rgba(29,29,29,.95);box-shadow:0 0 15px rgba(18,163,18,.35),inset 0 0 15px rgba(18,163,18,.08);overflow:hidden;}
+.location-box{display:flex;align-items:center;gap:15px;padding:12px 15px;border-bottom:1px solid rgba(18,163,18,.4);}
+.location-icon{width:42px;height:42px;flex-shrink:0;filter:drop-shadow(0 0 10px #00ff88);}
+.location-text{display:flex;flex-direction:column;min-width:0;}
+.city{color:#ffffff;font-size:20px;font-weight:700;line-height:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.state{color:#66ffb2;font-size:13px;margin-top:4px;text-shadow:0 0 8px #00ff88;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.bottom-row{display:flex;justify-content:space-between;align-items:center;padding:12px 15px;}
+.stat{display:flex;align-items:center;gap:10px;}
+.icon-small{width:28px;height:28px;color:#66ffb2;filter:drop-shadow(0 0 8px #00ff88);}
+.label{color:#bdbdbd;font-size:11px;letter-spacing:1px;}
+.value{color:#66ffb2;font-size:28px;font-weight:700;text-shadow:0 0 10px #00ff88;}
+.divider{width:2px;height:50px;background:#12a312;box-shadow:0 0 8px #00ff88;}
+</style>
 </head>
 <body>
-  <div id="location">📍 Aguardando GPS...</div>
+<div class="container">
+    <!-- Localização atual -->
+    <div class="location-box">
+        <svg class="location-icon" viewBox="0 0 24 24" fill="none">
+            <path d="M12 22s8-7 8-13a8 8 0 10-16 0c0 6 8 13 8 13z" stroke="#66ffb2" stroke-width="2"/>
+            <circle cx="12" cy="9" r="3" fill="#66ffb2"/>
+        </svg>
+        <div class="location-text">
+            <div id="city" class="city">Aguardando GPS...</div>
+            <div id="state" class="state">Conectando ao Moblin...</div>
+        </div>
+    </div>
+    <!-- Destino (fixo) -->
+    <div class="location-box">
+        <svg class="location-icon" viewBox="0 0 24 24" fill="#66ffb2" style="filter:drop-shadow(0 0 10px #00ff88)">
+            <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>
+        </svg>
+        <div class="location-text">
+            <div class="city">ORLANDO</div>
+            <div class="state">Flórida, United States</div>
+        </div>
+    </div>
+    <!-- Stats -->
+    <div class="bottom-row">
+        <div class="stat">
+            <svg class="icon-small" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14 14.76V3.5a2 2 0 10-4 0v11.26a4 4 0 104 0z"/>
+            </svg>
+            <div>
+                <div class="label">TEMPERATURA</div>
+                <div id="temp" class="value">--°C</div>
+            </div>
+        </div>
+        <div class="divider"></div>
+        <div class="stat">
+            <svg class="icon-small" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/>
+                <polyline points="12,6 12,12 16,14"/>
+            </svg>
+            <div>
+                <div class="label">HORA LOCAL</div>
+                <div id="clock" class="value">00:00</div>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
 
-  <script>
-    // Assina o tópico de localização do Moblin
+// Última posição conhecida
+let currentLat = null;
+let currentLon = null;
+let weatherTimer = null;
+let locationTimer = null;
+
+// ── Atualiza cidade/estado via reverse geocode ────────────────
+async function loadLocation(lat, lon) {
+    try {
+        const r = await fetch(
+            `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`
+        );
+        const d = await r.json();
+        const city = d.city || d.locality || d.principalSubdivision || "Desconhecido";
+        const state = d.principalSubdivision || "";
+        const country = d.countryName || "";
+        document.getElementById("city").textContent = city.toUpperCase();
+        document.getElementById("state").textContent = `${state}, ${country}`;
+    } catch(e) {
+        document.getElementById("city").textContent = "ERRO GEO";
+        document.getElementById("state").textContent = "Sem resposta da API";
+    }
+}
+
+// ── Atualiza temperatura ──────────────────────────────────────
+async function loadWeather(lat, lon) {
+    try {
+        const r = await fetch(
+            `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m`
+        );
+        const d = await r.json();
+        document.getElementById("temp").textContent = Math.round(d.current.temperature_2m) + "°C";
+    } catch(e) {}
+}
+
+// ── Relógio ───────────────────────────────────────────────────
+function updateClock() {
+    const hora = new Date().toLocaleTimeString("en-US", {
+        timeZone: "America/Denver",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false
+    });
+    document.getElementById("clock").textContent = hora;
+}
+updateClock();
+setInterval(updateClock, 1000);
+
+// ── Recebe GPS do Moblin em tempo real ────────────────────────
+function onNewCoords(lat, lon) {
+    if (lat === currentLat && lon === currentLon) return; // sem mudança
+    currentLat = lat;
+    currentLon = lon;
+
+    // Atualiza localização imediatamente
+    loadLocation(lat, lon);
+    loadWeather(lat, lon);
+
+    // Reinicia timers de atualização periódica
+    clearInterval(weatherTimer);
+    clearInterval(locationTimer);
+    weatherTimer  = setInterval(() => loadWeather(currentLat, currentLon),  300000); // 5 min
+    locationTimer = setInterval(() => loadLocation(currentLat, currentLon), 300000); // 5 min
+}
+
+// ── API do Moblin ─────────────────────────────────────────────
+if (typeof moblin !== "undefined") {
     moblin.subscribe({ location: {} });
-
     moblin.onmessage = (message) => {
-      if (message.location) {
-        const lat = message.location.latitude?.toFixed(5);
-        const lon = message.location.longitude?.toFixed(5);
-        const spd = message.location.speed != null
-          ? (message.location.speed * 3.6).toFixed(1) + " km/h"
-          : "";
-        document.getElementById("location").innerText =
-          `📍 ${lat}, ${lon}  ${spd}`;
-      }
+        if (message.location) {
+            const lat = message.location.latitude;
+            const lon = message.location.longitude;
+            if (lat != null && lon != null) {
+                onNewCoords(lat, lon);
+            }
+        }
     };
-  </script>
+} else {
+    // Fallback para testar fora do Moblin (ex: abrir no browser)
+    document.getElementById("city").textContent  = "SEM MOBLIN";
+    document.getElementById("state").textContent = "API não detectada";
+}
+
+</script>
 </body>
 </html>
