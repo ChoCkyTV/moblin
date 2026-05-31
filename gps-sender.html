@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><title>GPS Sender</title></head>
+<body>
+<script>
+// ============================================================
+// COLE SEU BIN ID E API KEY DO JSONBIN.IO AQUI
+const BIN_ID  = "6a1c6cda21f9ee59d2a1c519";
+const API_KEY = "$2a$10$SYunp8nmiUcU3Xn8dO8OgevJaZRtEadSLSqjccRCCNHEYgPQkiHS6";
+// ============================================================
+
+function sendGPS(lat, lon) {
+    fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
+        method: "PUT",
+        headers: {
+            "Content-Type": "application/json",
+            "X-Master-Key": API_KEY
+        },
+        body: JSON.stringify({ lat, lon, ts: Date.now() })
+    }).catch(() => {});
+}
+
+if (typeof moblin !== "undefined") {
+    moblin.subscribe({ location: {} });
+    moblin.onmessage = (msg) => {
+        if (msg.location?.latitude != null) {
+            sendGPS(msg.location.latitude, msg.location.longitude);
+        }
+    };
+}
+</script>
+</body>
+</html>
