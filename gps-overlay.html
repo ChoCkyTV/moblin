@@ -66,24 +66,24 @@ body{background:transparent;overflow:hidden;font-family:'Fira Sans',sans-serif;}
     </div>
 </div>
 <script>
-// ============================================================
-// COLE SEU BIN ID E API KEY DO JSONBIN.IO AQUI
-const BIN_ID  = "6a1c6cda21f9ee59d2a1c519";
-const API_KEY = "$2a$10$SYunp8nmiUcU3Xn8dO8OgevJaZRtEadSLSqjccRCCNHEYgPQkiHS6";
-// ============================================================
+const WEBHOOK = "https://eosz4pdhspygyxm.m.pipedream.net";
 
 let lastTs = 0;
+let lastLat = null;
+let lastLon = null;
 
 async function fetchGPS() {
     try {
-        const r = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, {
-            headers: { "X-Master-Key": API_KEY }
+        const r = await fetch(WEBHOOK, {
+            method: "GET",
+            headers: { "Content-Type": "application/json" }
         });
         const d = await r.json();
-        const { lat, lon, ts } = d.record;
-        if (ts !== lastTs) {
-            lastTs = ts;
-            updateLocation(lat, lon);
+        if (d.ts && d.ts !== lastTs && d.lat !== 0) {
+            lastTs = d.ts;
+            lastLat = d.lat;
+            lastLon = d.lon;
+            updateLocation(d.lat, d.lon);
         }
     } catch(e) {}
 }
@@ -106,14 +106,17 @@ async function updateLocation(lat, lon) {
 
 function updateClock() {
     document.getElementById("clock").textContent = new Date().toLocaleTimeString("en-US", {
-        timeZone: "America/Denver", hour: "2-digit", minute: "2-digit", hour12: false
+        timeZone: "America/Denver",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false
     });
 }
 
 updateClock();
 setInterval(updateClock, 1000);
 fetchGPS();
-setInterval(fetchGPS, 15000); // atualiza a cada 15 segundos
+setInterval(fetchGPS, 15000);
 </script>
 </body>
 </html>
